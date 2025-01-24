@@ -10,7 +10,7 @@ declare module "next-auth" {
   }
 }
 
-export const { auth, handlers } = NextAuth({
+export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, profile }) {
       if (profile) {
