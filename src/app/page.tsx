@@ -1,6 +1,6 @@
 'use client';
 
-import { useSession, signIn, signOut } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -9,27 +9,28 @@ export default function Home() {
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-500 to-purple-600">
       <div className="text-center">
         <h1 className="text-6xl font-bold text-white mb-4">
-          Hello {session?.user?.name || "World"}!
+          Welcome {session?.user?.name || "to Next.js"}!
         </h1>
         <p className="text-xl text-white opacity-80 mb-8">
-          Welcome to Next.js with TypeScript and Entra ID Auth
+          {status === "loading" ? (
+            "Loading..."
+          ) : session ? (
+            `Signed in as ${session.user?.email}`
+          ) : (
+            "Please sign in"
+          )}
         </p>
-        
-        {status === "loading" ? (
-          <div className="text-white">Loading...</div>
-        ) : session ? (
-          <div className="space-y-4">
-            <p className="text-white">Signed in as {session.user?.email}</p>
-            <button
-              onClick={() => signOut()}
-              className="bg-white text-purple-600 px-6 py-2 rounded-lg font-semibold hover:bg-opacity-90 transition-all"
-            >
-              Sign out
-            </button>
-          </div>
+
+        {session ? (
+          <button
+            onClick={() => signOut()}
+            className="bg-white text-purple-600 px-6 py-2 rounded-lg font-semibold hover:bg-opacity-90 transition-all"
+          >
+            Sign out
+          </button>
         ) : (
           <button
-            onClick={() => signIn("azure-ad")}
+            onClick={() => signIn("microsoft-entra-id")}
             className="bg-white text-purple-600 px-6 py-2 rounded-lg font-semibold hover:bg-opacity-90 transition-all"
           >
             Sign in with Microsoft

@@ -1,13 +1,15 @@
+'use client';
+
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "./providers";
+import { SessionProvider } from "next-auth/react";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Next.js Auth Demo",
-  description: "Next.js with Entra ID authentication",
+  title: "Next.js App",
+  description: "Created with Next.js",
 };
 
 export default function RootLayout({
@@ -18,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <AuthProvider>{children}</AuthProvider>
+        <SessionProvider>{children}</SessionProvider>
       </body>
     </html>
   );

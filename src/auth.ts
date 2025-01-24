@@ -1,144 +1,34 @@
 import NextAuth from "next-auth";
-import type { DefaultSession } from "next-auth";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
-import { ProxyAgent, fetch as undici } from "undici";
-import { customFetch } from "next-auth";
+import { ProxyAgent } from "undici";
 
-// Get proxy URL from any of the possible environment variables
-const proxyUrl = 
-  process.env.HTTP_PROXY ||
-  process.env.HTTPS_PROXY ||
-  process.env.http_proxy ||
-  process.env.https_proxy;
+// Create proxy agent if proxy is configured
+const proxyAgent = process.env.http_proxy ? new ProxyAgent(process.env.http_proxy) : undefined;
 
-// Create proxy fetch function
-function proxyFetch(...args: Parameters<typeof fetch>): ReturnType<typeof fetch> {
-  console.log(
-    "Proxy called for URL:",
-    args[0] instanceof Request ? args[0].url : args[0]
-  );
-  const dispatcher = new ProxyAgent(proxyUrl!);
+// Custom fetch function that uses the proxy
+const proxyFetch = async (url: string, options: RequestInit) => {
+  if (!proxyAgent) return fetch(url, options);
+  // Use type assertion for the proxy agent
+  return fetch(url, { ...options, agent: proxyAgent } as RequestInit);
+};
 
-  if (args[0] instanceof Request) {
-    const request = args[0];
-    const init = {
-      ...args[1],
-      method: request.method,
-      headers: request.headers as HeadersInit,
-      dispatcher,
-    };
-    
-    if (request.body) {
-      init.body = request.body as BodyInit;
-    }
-
-    // @ts-expect-error `undici` has a `duplex` option
-    return undici(request.url, init);
-  }
-
-  // @ts-expect-error `undici` has a `duplex` option
-  return undici(args[0], { ...(args[1] || {}), dispatcher });
-}
-
-declare module "next-auth" {
-  interface Session {
-    user: {
-      role?: string;
-    } & DefaultSession["user"]
-  }
-}
-
-// Create and configure the provider with proxy support
-function createEntraIDProvider() {
-  if (!proxyUrl) {
-    console.log("Proxy is not enabled");
-  } else {
-    console.log("Proxy is enabled:", proxyUrl);
-  }
-
-  // Create base provider
-  const provider = MicrosoftEntraID({
-    clientId: process.env.AUTH_ENTRA_ID_CLIENT_ID!,
-    clientSecret: process.env.AUTH_ENTRA_ID_CLIENT_SECRET!,
-    authorization: { 
-      params: { 
-        scope: "openid profile email User.Read",
-        tenant: process.env.AUTH_ENTRA_ID_TENANT_ID
-      } 
-    }
-  });
-
-  if (!proxyUrl) return provider;
-
-  // Override customFetch to handle proxy
-  provider[customFetch] = async (...args: Parameters<typeof fetch>) => {
-    const url = new URL(args[0] instanceof Request ? args[0].url : args[0]);
-    console.log("Custom Fetch Intercepted:", url.toString());
-
-    // Handle OpenID configuration
-    if (url.pathname.endsWith(".well-known/openid-configuration")) {
-      console.log("Intercepting .well-known/openid-configuration");
-      const response = await proxyFetch(...args);
-      const json = await response.clone().json();
-      const tenantId = process.env.AUTH_ENTRA_ID_TENANT_ID ?? "common";
-      const issuer = json.issuer.replace("{tenantid}", tenantId);
-      console.log("Modified issuer:", issuer);
-      return Response.json({ ...json, issuer });
-    }
-
-    return proxyFetch(...args);
-  };
-
-  // Override profile to use proxy for photo fetch
-  provider.profile = async (profile, tokens) => {
-    const profilePhotoSize = 48;
-    console.log("Fetching profile photo via proxy");
-
-    const response = await proxyFetch(
-      `https://graph.microsoft.com/v1.0/me/photos/${profilePhotoSize}x${profilePhotoSize}/$value`,
-      { headers: { Authorization: `Bearer ${tokens.access_token}` } }
-    );
-
-    let image: string | null = null;
-    if (response.ok && typeof Buffer !== "undefined") {
-      try {
-        const pictureBuffer = await response.arrayBuffer();
-        const pictureBase64 = Buffer.from(pictureBuffer).toString("base64");
-        image = `data:image/jpeg;base64,${pictureBase64}`;
-      } catch (error) {
-        console.error("Error processing profile photo:", error);
-      }
-    }
-
-    return {
-      id: profile.sub,
-      name: profile.name,
-      email: profile.email,
-      image: image ?? null
-    };
-  };
-
-  return provider;
-}
-
-const auth = NextAuth({
-  providers: [createEntraIDProvider()],
-  callbacks: {
-    async jwt({ token, profile }) {
-      if (profile) {
-        token.role = profile.role ?? "user";
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session?.user) {
-        session.user.role = token.role as string;
-      }
-      return session;
-    },
-  },
-});
-
-export const { handlers } = auth;
-export const { GET, POST } = handlers;
-export default auth; 
+export const { handlers, signIn, signOut, auth } = NextAuth({
+  providers: [
+    MicrosoftEntraID({
+      clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_ID,
+      clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
+      issuer: process.env.AUTH_MICROSOFT_ENTRA_ID_ISSUER,
+      authorization: { params: { scope: "openid profile email" } },
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email,
+          image: null,
+        };
+      },
+    }),
+  ],
+  // @ts-expect-error - fetch is available in Next.js runtime
+  runtime: { fetch: proxyFetch },
+}); 
