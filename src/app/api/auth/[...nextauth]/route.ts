@@ -1,6 +1,6 @@
-import { handlers } from "@/auth";
+import { GET, POST } from "@/auth";
 
-export const { GET, POST } = handlers;
+export { GET, POST };
 
 // Enable edge runtime
 export const runtime = "edge";
