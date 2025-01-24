@@ -40,7 +40,7 @@ function proxyFetch(...args: Parameters<typeof fetch>): ReturnType<typeof fetch>
 }
 
 // Create and configure the provider with proxy support
-function createEntraIDProvider() {
+export function createEntraIDProvider() {
   if (!proxyUrl) {
     console.log("Proxy is not enabled");
   } else {
@@ -112,6 +112,9 @@ function createEntraIDProvider() {
   return provider;
 }
 
-export default {
+// Export the config with the provider
+const config = {
   providers: [createEntraIDProvider()],
-} satisfies NextAuthConfig 
+} satisfies NextAuthConfig;
+
+export default config; 
