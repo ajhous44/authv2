@@ -1,18 +1,19 @@
-import NextAuth from "next-auth";
+import NextAuth, { customFetch } from "next-auth";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
-import { ProxyAgent } from "undici";
+import type { NextAuthConfig } from "next-auth";
+import { ProxyAgent, fetch as undici } from "undici";
 
 // Create proxy agent if proxy is configured
-const proxyAgent = process.env.http_proxy ? new ProxyAgent(process.env.http_proxy) : undefined;
+const dispatcher = process.env.http_proxy ? new ProxyAgent(process.env.http_proxy) : undefined;
 
 // Custom fetch function that uses the proxy
-const proxyFetch = async (url: string, options: RequestInit) => {
-  if (!proxyAgent) return fetch(url, options);
-  // Use type assertion for the proxy agent
-  return fetch(url, { ...options, agent: proxyAgent } as RequestInit);
-};
+function proxy(...args: Parameters<typeof fetch>): ReturnType<typeof fetch> {
+  if (!dispatcher) return fetch(...args);
+  // @ts-expect-error `undici` has a `duplex` option
+  return undici(args[0], { ...args[1], dispatcher });
+}
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+const config = {
   providers: [
     MicrosoftEntraID({
       clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_ID,
@@ -27,8 +28,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           image: null,
         };
       },
+      [customFetch]: proxy,
     }),
   ],
-  // @ts-expect-error - fetch is available in Next.js runtime
-  runtime: { fetch: proxyFetch },
-}); 
+} satisfies NextAuthConfig;
+
+export const { handlers, signIn, signOut, auth } = NextAuth(config); 
