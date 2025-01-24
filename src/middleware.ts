@@ -1,11 +1,25 @@
-import NextAuth from "next-auth";
-import authConfig from "./auth.config";
+import { NextResponse, type NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-export const { auth: middleware } = NextAuth(authConfig);
+export async function middleware(request: NextRequest) {
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
 
-// Export the middleware config
+  // If user is not authenticated, redirect to login
+  if (!token) {
+    const loginUrl = new URL("/api/auth/signin", request.url);
+    loginUrl.searchParams.set("callbackUrl", request.url);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return NextResponse.next();
+}
+
+// Protect all routes except public ones
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
-} as const;
-
-export default middleware; 
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|auth/signin).*)",
+  ],
+} as const; 
