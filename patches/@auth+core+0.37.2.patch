@@ -19,8 +19,8 @@ index e4e64ca..f912fc7 100644
 +        const discoveryResponse = await o.discoveryRequest(issuer,
 +          {
 +            [o.customFetch]: (...args) => {
-+              if (process.env.HTTP_PROXY) {
-+                const agent = new ProxyAgent(process.env.HTTP_PROXY);
++              if (process.env.http_proxy) {
++                const agent =  new ProxyAgent(process.env.http_proxy);
 +                args[1].dispatcher = agent;
 +              }
 +              return fetch(...args);
@@ -33,13 +33,12 @@ index e4e64ca..f912fc7 100644
                  args[1]?.body instanceof URLSearchParams) {
                  args[1].body.delete("code_verifier");
              }
-+            if (process.env.HTTP_PROXY) {
-+              args[1].dispatcher = new ProxyAgent(process.env.HTTP_PROXY);
++            if (process.env.http_proxy) {
++              args[1].dispatcher = new ProxyAgent(process.env.http_proxy);
 +            }
              return fetch(...args);
          },
      });
-
 diff --git a/node_modules/@auth/core/lib/actions/signin/authorization-url.js b/node_modules/@auth/core/lib/actions/signin/authorization-url.js
 index 8f093cb..6553c77 100644
 --- a/node_modules/@auth/core/lib/actions/signin/authorization-url.js
@@ -60,8 +59,8 @@ index 8f093cb..6553c77 100644
 +        const discoveryResponse = await o.discoveryRequest(issuer,
 +        {
 +          [o.customFetch]: (...args) => {
-+            if (process.env.HTTP_PROXY) {
-+              const agent = new ProxyAgent(process.env.HTTP_PROXY);
++            if (process.env.http_proxy) {
++              const agent =  new ProxyAgent(process.env.http_proxy);
 +              args[1].dispatcher = agent;
 +            }
 +            return fetch(...args);
@@ -70,7 +69,6 @@ index 8f093cb..6553c77 100644
          const as = await o.processDiscoveryResponse(issuer, discoveryResponse);
          if (!as.authorization_endpoint) {
              throw new TypeError("Authorization server did not provide an authorization endpoint.");
-
 diff --git a/node_modules/@auth/core/providers/microsoft-entra-id.js b/node_modules/@auth/core/providers/microsoft-entra-id.js
 index 2063d5e..8b45cb6 100644
 --- a/node_modules/@auth/core/providers/microsoft-entra-id.js
@@ -102,8 +100,8 @@ index 2063d5e..8b45cb6 100644
 +                }
 +            };
 +
-+            if (process.env.HTTP_PROXY) {
-+                fetchOptions.dispatcher = new ProxyAgent(process.env.HTTP_PROXY);
++            if (process.env.http_proxy) {
++                fetchOptions.dispatcher = new ProxyAgent(process.env.http_proxy);
 +            }
 +            const response = await fetch(`https://graph.microsoft.com/v1.0/me/photos/${profilePhotoSize}x${profilePhotoSize}/$value`, fetchOptions);
              // Confirm that profile photo was returned
@@ -129,4 +127,4 @@ index 2063d5e..8b45cb6 100644
 -        options: rest,
 +        options: rest
      };
- } 
+ }
