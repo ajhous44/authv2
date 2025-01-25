@@ -1,11 +1,5 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import { ClientProvider } from "@/app/client-provider";
-
-export const metadata: Metadata = {
-  title: "Next.js App",
-  description: "Created with Next.js",
-};
+// app/layout.tsx
+import { SessionProvider } from "next-auth/react";
 
 export default function RootLayout({
   children,
@@ -14,8 +8,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="font-sans">
-        <ClientProvider>{children}</ClientProvider>
+      <body>
+        <SessionProvider>{children}</SessionProvider>
       </body>
     </html>
   );
